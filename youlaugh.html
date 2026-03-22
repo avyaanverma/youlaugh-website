@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouLaugh — YouTube Downloader Extension</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<style>
+  :root {
+    --olive-900: #1a1f0a;
+    --olive-800: #252d0e;
+    --olive-700: #3a4510;
+    --olive-600: #4e5e14;
+    --olive-500: #6b7c1a;
+    --olive-400: #8a9e22;
+    --olive-300: #a8be2e;
+    --olive-200: #c4d464;
+    --olive-100: #e0ea9e;
+    --olive-50:  #f2f6d0;
+    --cream:     #faf8f0;
+    --gold:      #c9a84c;
+    --gold-light:#e8c96a;
+    --rust:      #8b4513;
+    --text-dark: #1a1f0a;
+    --text-mid:  #3a4510;
+    --text-light: #6b7c1a;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--olive-900);
+    color: var(--cream);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--olive-300);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .2s, height .2s, background .2s;
+    mix-blend-mode: exclusion;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--olive-300);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all .1s ease;
+    mix-blend-mode: exclusion;
+  }
+  body:hover .cursor { opacity: 1; }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9990;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 1000;
+    padding: 1.2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(26,31,10,0.6);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(168,190,46,0.12);
+  }
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--olive-200);
+    letter-spacing: -0.02em;
+  }
+  .nav-logo span { color: var(--gold); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+  }
+  .nav-links a {
+    color: var(--olive-200);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color .3s;
+  }
+  .nav-links a:hover { color: var(--gold); }
+  .github-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1rem;
+    border: 1px solid rgba(168,190,46,0.3);
+    border-radius: 4px;
+    transition: all .3s !important;
+  }
+  .github-nav-link:hover {
+    background: rgba(168,190,46,0.1) !important;
+    border-color: var(--olive-300) !important;
+  }
+  .github-icon { width: 16px; height: 16px; fill: currentColor; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Animated background orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .orb-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(106,124,26,0.25), transparent 70%);
+    top: -100px; left: -100px;
+  }
+  .orb-2 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,168,76,0.15), transparent 70%);
+    bottom: 0; right: -100px;
+  }
+  .orb-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(168,190,46,0.12), transparent 70%);
+    top: 40%; left: 60%;
+  }
+
+  /* Grid lines background */
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(168,190,46,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,190,46,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: rgba(201,168,76,0.06);
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.5); }
+  }
+
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--olive-400);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3.5rem, 9vw, 8rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 1.5rem;
+  }
+  .hero-title .line-1 { color: var(--cream); display: block; }
+  .hero-title .line-2 { color: var(--olive-300); display: block; }
+  .hero-title .accent { color: var(--gold); font-style: italic; }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--olive-100);
+    max-width: 520px;
+    line-height: 1.7;
+    margin: 0 auto 3rem;
+    position: relative;
+    z-index: 1;
+    opacity: 0.8;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 2rem;
+    background: var(--olive-300);
+    color: var(--olive-900);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    border-radius: 6px;
+    border: none;
+    cursor: none;
+    transition: all .3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    transform: translateX(-100%);
+    transition: transform .4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 2rem;
+    border: 1px solid rgba(168,190,46,0.35);
+    color: var(--olive-200);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    border-radius: 6px;
+    cursor: none;
+    transition: all .3s;
+  }
+  .btn-secondary:hover {
+    border-color: var(--olive-300);
+    background: rgba(168,190,46,0.08);
+    color: var(--olive-100);
+  }
+
+  /* Hero bottom decoration */
+  .hero-scroll-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 1;
+  }
+  .scroll-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--olive-500);
+    text-transform: uppercase;
+  }
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--olive-500), transparent);
+    animation: scrollDown 1.5s ease-in-out infinite;
+  }
+  @keyframes scrollDown {
+    0% { transform: scaleY(0); transform-origin: top; }
+    50% { transform: scaleY(1); transform-origin: top; }
+    51% { transform: scaleY(1); transform-origin: bottom; }
+    100% { transform: scaleY(0); transform-origin: bottom; }
+  }
+
+  /* SECTION shared */
+  section { padding: 7rem 2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--olive-400);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .section-label::before {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--olive-500);
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--cream);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.2rem;
+  }
+  .section-title em { color: var(--olive-300); font-style: italic; }
+
+  /* FEATURES */
+  .features-section { background: var(--olive-900); }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5px;
+    margin-top: 4rem;
+    border: 1.5px solid rgba(168,190,46,0.12);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .feature-card {
+    padding: 2.5rem;
+    background: rgba(26,31,10,0.8);
+    position: relative;
+    transition: background .3s;
+  }
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(168,190,46,0.06), transparent);
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  .feature-card:hover { background: rgba(37,45,14,0.9); }
+  .feature-card:hover::after { opacity: 1; }
+  .feature-icon {
+    width: 44px; height: 44px;
+    background: rgba(168,190,46,0.1);
+    border: 1px solid rgba(168,190,46,0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+  }
+  .feature-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 0.7rem;
+  }
+  .feature-desc {
+    font-size: 0.88rem;
+    color: var(--olive-100);
+    line-height: 1.7;
+    opacity: 0.7;
+  }
+
+  /* V1 NOTICE */
+  .v1-section {
+    background: var(--olive-800);
+    position: relative;
+    overflow: hidden;
+  }
+  .v1-section::before {
+    content: 'v1';
+    position: absolute;
+    right: -2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Playfair Display', serif;
+    font-size: 18rem;
+    font-weight: 900;
+    color: rgba(168,190,46,0.04);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+  .v1-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+    align-items: center;
+  }
+  @media(max-width: 768px) { .v1-inner { grid-template-columns: 1fr; gap: 2.5rem; } }
+  .v1-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.9rem;
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+  }
+  .v1-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .v1-note {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.2rem;
+    border: 1px solid rgba(168,190,46,0.1);
+    border-radius: 8px;
+    background: rgba(26,31,10,0.5);
+    transition: border-color .3s;
+  }
+  .v1-note:hover { border-color: rgba(168,190,46,0.25); }
+  .v1-note-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+  .v1-note-text {
+    font-size: 0.87rem;
+    color: var(--olive-100);
+    line-height: 1.65;
+    opacity: 0.8;
+  }
+  .v1-note-text strong { color: var(--cream); opacity: 1; font-weight: 600; }
+
+  /* SETUP INSTRUCTIONS */
+  .setup-section { background: var(--olive-900); }
+  .steps-container { margin-top: 4rem; }
+  .step-group {
+    margin-bottom: 3rem;
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(168,190,46,0.15);
+  }
+  .step-num {
+    width: 36px; height: 36px;
+    background: var(--olive-700);
+    border: 1px solid rgba(168,190,46,0.3);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--olive-200);
+    flex-shrink: 0;
+  }
+  .step-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--cream);
+  }
+  .step-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-left: 3.2rem;
+  }
+  .step-list li {
+    display: flex;
+    gap: 0.8rem;
+    align-items: flex-start;
+    font-size: 0.9rem;
+    color: var(--olive-100);
+    line-height: 1.65;
+    opacity: 0.85;
+  }
+  .step-list li::before {
+    content: '→';
+    color: var(--olive-400);
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    background: rgba(168,190,46,0.1);
+    border: 1px solid rgba(168,190,46,0.2);
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+    color: var(--olive-200);
+  }
+
+  /* Troubleshooting */
+  .trouble-section { background: var(--olive-800); }
+  .trouble-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.2rem;
+    margin-top: 3.5rem;
+  }
+  .trouble-card {
+    padding: 1.8rem;
+    border: 1px solid rgba(168,190,46,0.12);
+    border-radius: 10px;
+    background: rgba(26,31,10,0.5);
+    transition: all .3s;
+  }
+  .trouble-card:hover {
+    border-color: rgba(168,190,46,0.3);
+    transform: translateY(-3px);
+  }
+  .trouble-problem {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  .trouble-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--cream);
+    margin-bottom: 0.7rem;
+  }
+  .trouble-solution {
+    font-size: 0.86rem;
+    color: var(--olive-100);
+    line-height: 1.6;
+    opacity: 0.75;
+  }
+
+  /* DOWNLOAD CTA */
+  .cta-section {
+    background: var(--olive-900);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(106,124,26,0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cta-inner { position: relative; z-index: 1; }
+  .cta-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--cream);
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+  .cta-title em { color: var(--olive-300); font-style: italic; }
+  .cta-sub {
+    font-size: 1rem;
+    color: var(--olive-100);
+    opacity: 0.7;
+    margin-bottom: 3rem;
+    max-width: 460px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+  .download-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  .download-ring {
+    position: absolute;
+    inset: -12px;
+    border: 1px dashed rgba(168,190,46,0.25);
+    border-radius: 14px;
+    animation: spin 20s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* FOOTER */
+  footer {
+    background: var(--olive-800);
+    border-top: 1px solid rgba(168,190,46,0.1);
+    padding: 3rem 2rem;
+  }
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+  .footer-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--olive-200);
+  }
+  .footer-brand span { color: var(--gold); }
+  .footer-credit {
+    font-size: 0.82rem;
+    color: var(--olive-400);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .footer-credit a {
+    color: var(--olive-300);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: color .3s;
+  }
+  .footer-credit a:hover { color: var(--gold); }
+  .footer-version {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--olive-600);
+    letter-spacing: 0.1em;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(168,190,46,0.2), transparent);
+    margin: 0 2rem;
+  }
+
+  /* Initial states for GSAP */
+  .fade-up { opacity: 0; transform: translateY(40px); }
+  .fade-in { opacity: 0; }
+  .slide-left { opacity: 0; transform: translateX(-40px); }
+  .slide-right { opacity: 0; transform: translateX(40px); }
+
+  /* Horizontal scroll marquee */
+  .marquee-section {
+    padding: 2rem 0;
+    overflow: hidden;
+    background: rgba(168,190,46,0.05);
+    border-top: 1px solid rgba(168,190,46,0.08);
+    border-bottom: 1px solid rgba(168,190,46,0.08);
+  }
+  .marquee-track {
+    display: flex;
+    gap: 3rem;
+    animation: marquee 20s linear infinite;
+    white-space: nowrap;
+    width: max-content;
+  }
+  .marquee-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--olive-500);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-shrink: 0;
+  }
+  .marquee-item::before { content: '◆'; color: var(--olive-700); font-size: 0.5em; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+</style>
+</head>
+<body>
+
+<!-- Custom cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-logo">You<span>Laugh</span></div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#setup">Setup</a>
+    <a href="#troubleshooting">Help</a>
+    <a href="https://github.com/avyaanverma/youtube-downloader-fullstack/tree/main" target="_blank" class="github-nav-link">
+      <svg class="github-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+      </svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="hero-badge" id="hero-badge">
+    <span class="badge-dot"></span>
+    Open Source Browser Extension
+  </div>
+
+  <p class="hero-eyebrow" id="hero-eyebrow">— Download YouTube videos effortlessly —</p>
+
+  <h1 class="hero-title">
+    <span class="line-1" id="hero-line1">You<span class="accent">Laugh,</span></span>
+    <span class="line-2" id="hero-line2">You Download</span>
+  </h1>
+
+  <p class="hero-sub" id="hero-sub">
+    A clean, open-source browser extension that lets you grab YouTube videos directly. No bloatware. No redirects. Just your content.
+  </p>
+
+  <div class="hero-actions" id="hero-actions">
+    <a href="https://github.com/avyaanverma/youtube-downloader-fullstack/archive/refs/heads/main.zip" class="btn-primary" id="download-btn">
+      <span>⬇ Download Extension</span>
+    </a>
+    <a href="https://github.com/avyaanverma/youtube-downloader-fullstack/tree/main" target="_blank" class="btn-secondary">
+      <svg style="width:15px;height:15px;fill:currentColor;flex-shrink:0" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      View Source
+    </a>
+  </div>
+
+  <div class="hero-scroll-hint">
+    <span class="scroll-text">scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <span class="marquee-item">Chrome Compatible</span>
+    <span class="marquee-item">Brave Compatible</span>
+    <span class="marquee-item">Edge Compatible</span>
+    <span class="marquee-item">Open Source</span>
+    <span class="marquee-item">Developer Mode</span>
+    <span class="marquee-item">Multiple Qualities</span>
+    <span class="marquee-item">No Ads</span>
+    <span class="marquee-item">Free Forever</span>
+    <span class="marquee-item">Chrome Compatible</span>
+    <span class="marquee-item">Brave Compatible</span>
+    <span class="marquee-item">Edge Compatible</span>
+    <span class="marquee-item">Open Source</span>
+    <span class="marquee-item">Developer Mode</span>
+    <span class="marquee-item">Multiple Qualities</span>
+    <span class="marquee-item">No Ads</span>
+    <span class="marquee-item">Free Forever</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="container">
+    <div class="section-label fade-up">What it does</div>
+    <h2 class="section-title fade-up">Built for <em>simplicity.</em><br>Powered by you.</h2>
+    <p class="fade-up" style="font-size:0.95rem;color:var(--olive-100);opacity:0.7;max-width:480px;line-height:1.7;margin-top:0.5rem;">A lightweight extension that integrates right into your browser toolbar. No separate app. No account needed.</p>
+
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🎬</div>
+        <div class="feature-title">YouTube Native</div>
+        <p class="feature-desc">Works directly on YouTube video pages. Just open the extension popup while watching any video and pick your quality.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">⚙️</div>
+        <div class="feature-title">Quality Control</div>
+        <p class="feature-desc">Choose your preferred resolution before downloading. No forced quality — your download, your choice.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🔓</div>
+        <div class="feature-title">Fully Open Source</div>
+        <p class="feature-desc">Every line of code is on GitHub. Inspect it, fork it, contribute to it. Nothing hidden, nothing phoning home.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🌱</div>
+        <div class="feature-title">Zero Bloat</div>
+        <p class="feature-desc">No third-party trackers. No analytics scripts. Just a clean manifest and the code needed to do one thing well.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">🛠️</div>
+        <div class="feature-title">Dev Mode Install</div>
+        <p class="feature-desc">Load it unpacked in under 2 minutes via Chrome's developer mode. No store listing needed — full control.</p>
+      </div>
+      <div class="feature-card fade-up">
+        <div class="feature-icon">📡</div>
+        <div class="feature-title">Server-side Processing</div>
+        <p class="feature-desc">Downloads are handled via a backend server for reliability across different video formats and sources.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- V1 NOTICE -->
+<section class="v1-section">
+  <div class="container">
+    <div class="v1-inner">
+      <div class="slide-left">
+        <div class="v1-badge">🏷 Version 1.0.0 — Early Release</div>
+        <h2 class="section-title">Honest about<br>where we are.</h2>
+        <p style="font-size:0.9rem;color:var(--olive-100);opacity:0.7;line-height:1.7;margin-top:1rem;max-width:380px;">
+          This is v1. It works — but it's a first build. Downloads happen server-side, which means there's latency and the browser progress bar won't always show. That's expected. Improvements are coming.
+        </p>
+      </div>
+      <div class="v1-notes slide-right">
+        <div class="v1-note">
+          <span class="v1-note-icon">🐢</span>
+          <p class="v1-note-text"><strong>Downloads may feel slow.</strong> Processing happens on a backend server, not your local machine. Be patient — it's working.</p>
+        </div>
+        <div class="v1-note">
+          <span class="v1-note-icon">👻</span>
+          <p class="v1-note-text"><strong>No download progress bar?</strong> That's by design in v1. The download is still happening in the background even if you can't see it.</p>
+        </div>
+        <div class="v1-note">
+          <span class="v1-note-icon">🚫</span>
+          <p class="v1-note-text"><strong>Some videos may fail.</strong> Platform restrictions can block certain videos at the source. Try another video if one doesn't work.</p>
+        </div>
+        <div class="v1-note">
+          <span class="v1-note-icon">🚀</span>
+          <p class="v1-note-text"><strong>Speed & UX improvements</strong> are the top priority for v2. This is a foundation — a solid, honest one.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SETUP INSTRUCTIONS -->
+<section class="setup-section" id="setup">
+  <div class="container">
+    <div class="section-label fade-up">Setup Guide</div>
+    <h2 class="section-title fade-up">Up and running<br>in <em>3 steps.</em></h2>
+    <p class="fade-up" style="font-size:0.9rem;color:var(--olive-100);opacity:0.65;max-width:440px;line-height:1.7;margin-top:0.5rem;">No store listing. Load it via Developer Mode — it takes about 2 minutes.</p>
+
+    <div class="steps-container">
+
+      <div class="step-group">
+        <div class="step-header">
+          <div class="step-num">01</div>
+          <h3 class="step-title">Download &amp; Unzip</h3>
+        </div>
+        <ul class="step-list">
+          <li>Click the <strong style="color:var(--olive-200)">Download Extension</strong> button above to get the ZIP file from GitHub.</li>
+          <li>Extract it to a folder on your computer — for example: <code>Desktop/YouLaugh</code></li>
+          <li>Open the extracted folder and confirm it contains <code>manifest.json</code> directly inside (not nested in another folder).</li>
+        </ul>
+      </div>
+
+      <div class="step-group">
+        <div class="step-header">
+          <div class="step-num">02</div>
+          <h3 class="step-title">Load in Browser via Developer Mode</h3>
+        </div>
+        <ul class="step-list">
+          <li>Open your browser's extension page:
+            <br><span style="display:inline-block;margin-top:0.5rem;margin-left:0.5rem;">Chrome / Brave / Edge → <code>chrome://extensions</code></span>
+            <br><span style="display:inline-block;margin-top:0.3rem;margin-left:0.5rem;">Firefox → <code>about:debugging#/runtime/this-firefox</code> (temporary load)</span>
+          </li>
+          <li>Toggle on <strong style="color:var(--olive-200)">Developer mode</strong> (top-right switch in Chrome/Brave/Edge).</li>
+          <li>Click <strong style="color:var(--olive-200)">Load unpacked</strong> and select the extracted YouLaugh folder.</li>
+          <li>The <strong style="color:var(--olive-200)">YouLaugh icon</strong> should now appear in your browser toolbar. You may need to pin it from the extensions puzzle-piece menu.</li>
+        </ul>
+      </div>
+
+      <div class="step-group">
+        <div class="step-header">
+          <div class="step-num">03</div>
+          <h3 class="step-title">Start Downloading</h3>
+        </div>
+        <ul class="step-list">
+          <li>Navigate to any <strong style="color:var(--olive-200)">YouTube video page.</strong></li>
+          <li>Click the <strong style="color:var(--olive-200)">YouLaugh extension icon</strong> in your toolbar to open the popup.</li>
+          <li>Select your preferred quality from the dropdown.</li>
+          <li>Click <strong style="color:var(--olive-200)">Download</strong> and wait — the server will process and deliver the file.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- TROUBLESHOOTING -->
+<section class="trouble-section" id="troubleshooting">
+  <div class="container">
+    <div class="section-label fade-up">Troubleshooting</div>
+    <h2 class="section-title fade-up">Something<br><em>not working?</em></h2>
+
+    <div class="trouble-grid">
+      <div class="trouble-card fade-up">
+        <div class="trouble-problem">Issue 01</div>
+        <div class="trouble-title">Popup data won't load</div>
+        <p class="trouble-solution">Refresh the YouTube tab first, then reopen the extension popup. The extension needs an active YouTube video page to read from.</p>
+      </div>
+      <div class="trouble-card fade-up">
+        <div class="trouble-problem">Issue 02</div>
+        <div class="trouble-title">Download fails on a video</div>
+        <p class="trouble-solution">Some videos are restricted at the source platform level. Try a different video. If it consistently fails, it's likely a platform restriction, not a bug.</p>
+      </div>
+      <div class="trouble-card fade-up">
+        <div class="trouble-problem">Issue 03</div>
+        <div class="trouble-title">Extension changes not reflecting</div>
+        <p class="trouble-solution">Remove the extension from your browser, then re-load the unpacked folder via Developer mode. Chrome caches extension state aggressively.</p>
+      </div>
+      <div class="trouble-card fade-up">
+        <div class="trouble-problem">Issue 04</div>
+        <div class="trouble-title">No visible download progress</div>
+        <p class="trouble-solution">This is expected in v1. Downloads process server-side and may not trigger the browser's native progress UI. Check your Downloads folder after a moment.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA / DOWNLOAD -->
+<section class="cta-section" id="download">
+  <div class="container">
+    <div class="cta-inner">
+      <div class="section-label fade-up" style="justify-content:center;">Get it now</div>
+      <h2 class="cta-title fade-up">Ready to<br><em>start downloading?</em></h2>
+      <p class="cta-sub fade-up">Free. Open source. No sign-up. Download the ZIP and be set up in minutes.</p>
+
+      <div class="download-wrapper fade-up">
+        <div class="download-ring"></div>
+        <a href="https://github.com/avyaanverma/youtube-downloader-fullstack/archive/refs/heads/main.zip" class="btn-primary" style="padding:1.1rem 2.8rem;font-size:1rem;">
+          <span>⬇ Download YouLaugh v1</span>
+        </a>
+      </div>
+
+      <p class="fade-up" style="margin-top:2rem;font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--olive-600);letter-spacing:0.12em;">
+        ZIP · Unzip &amp; Load Unpacked · Chrome / Brave / Edge
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">You<span>Laugh</span></div>
+    <div class="footer-credit">
+      Built by
+      <a href="https://github.com/avyaanverma" target="_blank">
+        <svg style="width:14px;height:14px;fill:currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        avyaanverma
+      </a>
+    </div>
+    <div class="footer-version">v1.0.0 — Early Release</div>
+  </div>
+</footer>
+
+<script>
+// GSAP + ScrollTrigger
+gsap.registerPlugin(ScrollTrigger);
+
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX; mouseY = e.clientY;
+  gsap.to(cursor, { x: mouseX, y: mouseY, duration: 0 });
+});
+
+gsap.ticker.add(() => {
+  ringX += (mouseX - ringX) * 0.12;
+  ringY += (mouseY - ringY) * 0.12;
+  gsap.set(ring, { x: ringX, y: ringY });
+});
+
+document.querySelectorAll('a, button, .feature-card, .trouble-card, .v1-note').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    gsap.to(cursor, { width: 18, height: 18, duration: 0.2 });
+    gsap.to(ring, { width: 54, height: 54, borderColor: 'rgba(168,190,46,0.6)', duration: 0.2 });
+  });
+  el.addEventListener('mouseleave', () => {
+    gsap.to(cursor, { width: 10, height: 10, duration: 0.2 });
+    gsap.to(ring, { width: 36, height: 36, borderColor: 'rgba(168,190,46,0.5)', duration: 0.2 });
+  });
+});
+
+// HERO animations
+const heroTl = gsap.timeline({ delay: 0.2 });
+heroTl
+  .from('#hero-badge', { opacity: 0, y: 20, duration: 0.7, ease: 'power3.out' })
+  .from('#hero-eyebrow', { opacity: 0, y: 15, duration: 0.6, ease: 'power3.out' }, '-=0.4')
+  .from('#hero-line1', { opacity: 0, y: 50, duration: 0.9, ease: 'power4.out' }, '-=0.3')
+  .from('#hero-line2', { opacity: 0, y: 50, duration: 0.9, ease: 'power4.out' }, '-=0.6')
+  .from('#hero-sub', { opacity: 0, y: 25, duration: 0.7, ease: 'power3.out' }, '-=0.5')
+  .from('#hero-actions', { opacity: 0, y: 20, duration: 0.6, ease: 'power3.out' }, '-=0.4');
+
+// Orbs floating
+gsap.to('.orb-1', { x: 30, y: 20, duration: 8, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+gsap.to('.orb-2', { x: -20, y: -30, duration: 10, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+gsap.to('.orb-3', { x: 15, y: -15, duration: 6, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+
+// Scroll-triggered fade-ups
+gsap.utils.toArray('.fade-up').forEach((el, i) => {
+  gsap.to(el, {
+    opacity: 1,
+    y: 0,
+    duration: 0.8,
+    ease: 'power3.out',
+    scrollTrigger: {
+      trigger: el,
+      start: 'top 88%',
+      toggleActions: 'play none none none'
+    },
+    delay: (i % 3) * 0.1
+  });
+});
+
+// Slide left/right
+gsap.utils.toArray('.slide-left').forEach(el => {
+  gsap.to(el, {
+    opacity: 1, x: 0, duration: 1, ease: 'power3.out',
+    scrollTrigger: { trigger: el, start: 'top 80%' }
+  });
+});
+gsap.utils.toArray('.slide-right').forEach(el => {
+  gsap.to(el, {
+    opacity: 1, x: 0, duration: 1, ease: 'power3.out',
+    scrollTrigger: { trigger: el, start: 'top 80%' }
+  });
+});
+
+// Step groups stagger
+gsap.utils.toArray('.step-group').forEach((el, i) => {
+  gsap.to(el, {
+    opacity: 1,
+    y: 0,
+    duration: 0.9,
+    ease: 'power3.out',
+    scrollTrigger: { trigger: el, start: 'top 85%' },
+    delay: i * 0.15
+  });
+});
+
+// Feature cards stagger on scroll
+gsap.from('.feature-card', {
+  opacity: 0,
+  y: 40,
+  stagger: 0.1,
+  duration: 0.7,
+  ease: 'power3.out',
+  scrollTrigger: {
+    trigger: '.features-grid',
+    start: 'top 80%'
+  }
+});
+
+// Trouble cards
+gsap.from('.trouble-card', {
+  opacity: 0,
+  y: 30,
+  stagger: 0.12,
+  duration: 0.7,
+  ease: 'power3.out',
+  scrollTrigger: {
+    trigger: '.trouble-grid',
+    start: 'top 82%'
+  }
+});
+
+// Navbar background on scroll
+ScrollTrigger.create({
+  start: 100,
+  onEnter: () => gsap.to('nav', { borderBottomColor: 'rgba(168,190,46,0.2)', duration: 0.4 }),
+  onLeaveBack: () => gsap.to('nav', { borderBottomColor: 'rgba(168,190,46,0.12)', duration: 0.4 })
+});
+
+// Parallax hero elements
+gsap.to('.hero-grid', {
+  yPercent: 30,
+  ease: 'none',
+  scrollTrigger: {
+    trigger: '.hero',
+    start: 'top top',
+    end: 'bottom top',
+    scrub: true
+  }
+});
+
+// CTA title split reveal
+gsap.from('.cta-title', {
+  opacity: 0,
+  y: 60,
+  duration: 1.2,
+  ease: 'power4.out',
+  scrollTrigger: {
+    trigger: '.cta-title',
+    start: 'top 80%'
+  }
+});
+
+// V1 notes stagger
+gsap.from('.v1-note', {
+  opacity: 0,
+  x: 20,
+  stagger: 0.12,
+  duration: 0.7,
+  ease: 'power3.out',
+  scrollTrigger: {
+    trigger: '.v1-notes',
+    start: 'top 80%'
+  }
+});
+
+// Smooth nav links
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      gsap.to(window, {
+        duration: 1.2,
+        scrollTo: { y: target, offsetY: 80 },
+        ease: 'power3.inOut'
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>
